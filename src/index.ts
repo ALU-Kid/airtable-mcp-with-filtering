@@ -10,6 +10,8 @@ import {
 } from "@modelcontextprotocol/sdk/types.js";
 import axios, { AxiosInstance } from "axios";
 import { FieldOption, fieldRequiresOptions, getDefaultOptions, FieldType } from "./types.js";
+import { AirtableClient } from "./airtable.js";
+import { ListRecordsArgumentsSchema } from "./schema.js";
 
 const API_KEY = process.env.AIRTABLE_API_KEY;
 if (!API_KEY) {
@@ -19,12 +21,13 @@ if (!API_KEY) {
 class AirtableServer {
   private server: Server;
   private axiosInstance: AxiosInstance;
+  private airtable: AirtableClient;
 
   constructor() {
     this.server = new Server(
       {
         name: "airtable-server",
-        version: "0.2.0",
+        version: "0.4.0",
       },
       {
         capabilities: {
@@ -39,6 +42,7 @@ class AirtableServer {
         Authorization: `Bearer ${API_KEY}`,
       },
     });
+    this.airtable = new AirtableClient(this.axiosInstance);
 
     this.setupToolHandlers();
     
@@ -264,7 +268,59 @@ class AirtableServer {
                 type: "string",
                 description: "Name of the table",
               },
-              max_records: {
+              limit: {
+                type: "number",
+                description: "Maximum number of records to return",
+              },
+              filterByFormula: {
+                type: "string",
+                description: "Formula to filter records",
+              },
+              autoPaginate: {
+                type: "boolean",
+                description: "Fetch all pages automatically",
+              },
+              sort: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    field: { type: "string" },
+                    direction: { type: "string", enum: ["asc", "desc"] },
+                  },
+                  required: ["field", "direction"],
+                },
+                description: "Sorting parameters",
+              },
+            },
+            required: ["base_id", "table_name"],
+          },
+        },
+        {
+          name: "list_records_full",
+          description: "List all records in a table with pagination",
+          inputSchema: {
+            type: "object",
+            properties: {
+              base_id: { type: "string", description: "ID of the base" },
+              table_name: { type: "string", description: "Name of the table" },
+              filterByFormula: {
+                type: "string",
+                description: "Formula to filter records",
+              },
+              sort: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    field: { type: "string" },
+                    direction: { type: "string", enum: ["asc", "desc"] },
+                  },
+                  required: ["field", "direction"],
+                },
+                description: "Sorting parameters",
+              },
+              limit: {
                 type: "number",
                 description: "Maximum number of records to return",
               },
@@ -508,19 +564,36 @@ class AirtableServer {
           }
 
           case "list_records": {
-            const { base_id, table_name, max_records } = request.params.arguments as {
-              base_id: string;
-              table_name: string;
-              max_records?: number;
-            };
-            const response = await this.axiosInstance.get(`/${base_id}/${table_name}`, {
-              params: max_records ? { maxRecords: max_records } : undefined,
+            const args = ListRecordsArgumentsSchema.parse(
+              request.params.arguments
+            );
+            const records = await this.airtable.listRecords(args.base_id, args.table_name, {
+              limit: args.limit,
+              filterByFormula: args.filterByFormula,
+              sort: args.sort,
+              autoPaginate: args.autoPaginate,
             });
             return {
-              content: [{
-                type: "text",
-                text: JSON.stringify(response.data.records, null, 2),
-              }],
+              content: [
+                { type: "text", text: JSON.stringify(records, null, 2) },
+              ],
+            };
+          }
+
+          case "list_records_full": {
+            const args = ListRecordsArgumentsSchema.parse(
+              request.params.arguments
+            );
+            const records = await this.airtable.listRecords(args.base_id, args.table_name, {
+              limit: args.limit,
+              filterByFormula: args.filterByFormula,
+              sort: args.sort,
+              autoPaginate: true,
+            });
+            return {
+              content: [
+                { type: "text", text: JSON.stringify(records, null, 2) },
+              ],
             };
           }
 
