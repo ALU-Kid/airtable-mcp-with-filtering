@@ -118,6 +118,7 @@ List all bases
 
 #### Record Operations
 - `list_records`: Retrieve records from a table
+- `list_records_full`: Retrieve all records with pagination
 - `create_record`: Add a new record
 - `update_record`: Modify an existing record
 - `delete_record`: Remove a record
@@ -141,6 +142,28 @@ Available colors for select fields:
 - `yellowBright`, `purpleBright`, `pinkBright`
 - `grayBright`, `cyanBright`, `orangeBright`
 - `blueDark1`, `greenDark1`
+
+### list_records options
+
+- `filterByFormula` - Airtable formula to filter returned records
+- `autoPaginate` - fetch all pages automatically
+- `sort` - array of `{ field, direction }`
+- `limit` - maximum number of records
+
+Example filtering by date range:
+
+```json
+{
+  "name": "list SP Kanombe May",
+  "tool": "list_records",
+  "arguments": {
+    "base_id": "app...",
+    "table_name": "Public Charging Sessions",
+    "filterByFormula": "AND({Charger Name}='SP Kanombe', DATETIME_PARSE({Date}) >= '2025-05-01', DATETIME_PARSE({Date}) <= '2025-05-31')",
+    "autoPaginate": true
+  }
+}
+```
 
 ## Contributing
 
