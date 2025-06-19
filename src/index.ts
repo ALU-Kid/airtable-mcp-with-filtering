@@ -11,7 +11,12 @@ import {
 import axios, { AxiosInstance } from "axios";
 import { FieldOption, fieldRequiresOptions, getDefaultOptions, FieldType } from "./types.js";
 import { AirtableClient } from "./airtable.js";
-import { ListRecordsArgumentsSchema } from "./schema.js";
+
+import {
+  ListRecordsArgumentsSchema,
+  type ListRecordsArguments,
+} from "./schema.js";
+
 
 const API_KEY = process.env.AIRTABLE_API_KEY;
 if (!API_KEY) {
@@ -72,6 +77,18 @@ class AirtableServer {
     }
 
     return field;
+  }
+
+  private async getRecords(
+    args: ListRecordsArguments,
+    overrideAuto?: boolean
+  ) {
+    return this.airtable.listRecords(args.base_id, args.table_name, {
+      limit: args.limit,
+      filterByFormula: args.filterByFormula,
+      sort: args.sort,
+      autoPaginate: overrideAuto ?? args.autoPaginate,
+    });
   }
 
   private setupToolHandlers() {
@@ -567,12 +584,9 @@ class AirtableServer {
             const args = ListRecordsArgumentsSchema.parse(
               request.params.arguments
             );
-            const records = await this.airtable.listRecords(args.base_id, args.table_name, {
-              limit: args.limit,
-              filterByFormula: args.filterByFormula,
-              sort: args.sort,
-              autoPaginate: args.autoPaginate,
-            });
+
+            const records = await this.getRecords(args);
+
             return {
               content: [
                 { type: "text", text: JSON.stringify(records, null, 2) },
@@ -584,12 +598,8 @@ class AirtableServer {
             const args = ListRecordsArgumentsSchema.parse(
               request.params.arguments
             );
-            const records = await this.airtable.listRecords(args.base_id, args.table_name, {
-              limit: args.limit,
-              filterByFormula: args.filterByFormula,
-              sort: args.sort,
-              autoPaginate: true,
-            });
+            const records = await this.getRecords(args, true);
+
             return {
               content: [
                 { type: "text", text: JSON.stringify(records, null, 2) },
