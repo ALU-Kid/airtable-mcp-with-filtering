@@ -11,10 +11,12 @@ import {
 import axios, { AxiosInstance } from "axios";
 import { FieldOption, fieldRequiresOptions, getDefaultOptions, FieldType } from "./types.js";
 import { AirtableClient } from "./airtable.js";
+
 import {
   ListRecordsArgumentsSchema,
   type ListRecordsArguments,
 } from "./schema.js";
+
 
 const API_KEY = process.env.AIRTABLE_API_KEY;
 if (!API_KEY) {
@@ -582,7 +584,9 @@ class AirtableServer {
             const args = ListRecordsArgumentsSchema.parse(
               request.params.arguments
             );
+
             const records = await this.getRecords(args);
+
             return {
               content: [
                 { type: "text", text: JSON.stringify(records, null, 2) },
@@ -595,6 +599,7 @@ class AirtableServer {
               request.params.arguments
             );
             const records = await this.getRecords(args, true);
+
             return {
               content: [
                 { type: "text", text: JSON.stringify(records, null, 2) },
